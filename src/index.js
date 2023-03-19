@@ -1,52 +1,45 @@
 const express = require('express');
-const bodyParser = require('body-parser');
-const cors = require('cors');
 const mongoose = require('mongoose');
+const cors = require('cors');
 
 const app = express();
+const port = 5000;
 
-app.use(bodyParser.json());
 app.use(cors());
+app.use(express.json());
 
 mongoose.connect('mongodb://localhost:27017/?directConnection=true', {
   useNewUrlParser: true,
   useUnifiedTopology: true,
+})
+  .then(() => console.log('MongoDB connected'))
+  .catch((error) => console.log(error));
+
+const userSchema = new mongoose.Schema({
+  name: String,
+  email: String,
+  password: String,
 });
 
-const postSchema = new mongoose.Schema({
-  post: String,
-  comment: String,
+const User = mongoose.model('Register', userSchema);
+
+app.post('/register', (req, res) => {
+  const { name, email, password } = req.body;
+  if(!name)return res.status(404).send({status:false,msg:"Write Name"})
+  if(!email)return res.status(404).send({status:false,msg:"Write Email"})
+  if(!password)return res.status(404).send({status:false,msg:"Write Password"})
+
+ 
+  const user = new User({ name, email, password });
+  user.save()
+    .then(() => {
+      res.status(200).send('User registered successfully');
+    })
+    .catch((error) => {
+      res.status(400).send(error);
+    });
 });
 
-const Posts = mongoose.model('Post', postSchema);
-
-app.get('/Post', async (req, res) => {
-  const posts = await Posts.find({});
-  res.json(posts);
-});
-
-app.post('/Post', async (req, res) => {
-  const { post, comment } = req.body;
-  const posts = new Posts({ post, comment });
-  await posts.save();
-  res.json(posts);
-});
-
-app.put('/Post/:id', async (req, res) => {
-  const { id } = req.params;
-  const { post, comment } = req.body;
-  await Posts.findByIdAndUpdate(id, { post, comment });
-  const updatedName = await Posts.findById(id);
-  res.json(updatedName);
-});
-
-app.delete('/Post/:id', async (req, res) => {
-  const { id } = req.params;
-  await Posts.findByIdAndDelete(id);
-  res.json({ message: 'Post deleted' });
-});
-
-const port = process.env.PORT || 4000;
 app.listen(port, () => {
   console.log(`Server listening on port ${port}`);
 });
